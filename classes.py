@@ -30,11 +30,11 @@ class PoetryData:
 
     def count_tags(self) -> None:
         self.tags = self.data['Tags'].explode().value_counts()
+        self.tags = self.tags.reset_index()
+        self.tags.columns = ['Tag', 'Count']
 
-    def plot_tags(self, num_tags: int) -> None:
-        tags_df = self.tags.head(num_tags).reset_index()
-        tags_df.columns = ['Tag', 'Count']
-        sns.barplot(x='Tag', y='Count', data=tags_df)
+    def plot_tags(self, num_tags: int = 30) -> None:
+        sns.barplot(x='Tag', y='Count', data=self.tags.head(num_tags))
         plt.xticks(rotation=45, ha='right')
         plt.xlabel('Tags')
         plt.ylabel('Frequency')
