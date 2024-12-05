@@ -7,15 +7,19 @@ class PoetryData:
     def __init__(self, path: str = './data/PoetryFoundationData.csv',
                  cols: list = ['Poem', 'Tags']):
         self.data = self.load_poems(path, cols)
-
+        self.translate_dict = {}
         self.parse_text()
         self.parse_tags()
+        self.exploded_tags = self.data['Tags'].explode()
         self.count_tags()
 
     def load_poems(self, path: str, cols: list) -> pd.DataFrame:
         data = pd.read_csv(path, usecols=cols)
         data = data.dropna()
-        return data
+        return data.reset_index()
+
+    def load_translate_dict(self, translate_dict: dict) -> None:
+        self.translate_dict = translate_dict
 
     def parse_text(self) -> None:
         self.data['Poem'] = (self.data['Poem']
@@ -24,14 +28,25 @@ class PoetryData:
                              .str.strip())
 
     def parse_tags(self) -> None:
-        self.data['Tags'] = (self.data['Tags']
-                             .str.replace(' & ', ',', regex=False)
-                             .str.split(','))
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'([^,]+),\s*([^,]+),\s*&\s*([^,]+)',
+            r'\1 \2 & \3',
+            regex=True).str.split(',').apply(set)
 
     def count_tags(self) -> None:
-        self.tags = self.data['Tags'].explode().value_counts()
+        self.tags = self.exploded_tags.value_counts()
         self.tags = self.tags.reset_index()
         self.tags.columns = ['Tag', 'Count']
+
+    def translate_tags(self) -> None:
+        if not self.translate_dict:
+            raise ValueError("Translation dictionary is empty!")
+
+        self.exploded_tags = self.exploded_tags.replace(self.translate_dict)
+        self.data['Tags'] = self.exploded_tags.groupby(
+            self.exploded_tags.index).agg(set)
+        self.exploded_tags = self.data['Tags'].explode()
+        self.count_tags()
 
     def plot_tags(self, num_tags: int = 30) -> None:
         sns.barplot(x='Tag', y='Count', data=self.tags.head(num_tags))
