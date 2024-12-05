@@ -4,7 +4,7 @@ from classes import *
 
 if __name__ == "__main__":
     poetry = PoetryData('./data/PoetryFoundationData.csv', ['Poem', 'Tags'])
-    # poetry.plot_tags(30)
+    # poetry.plot_tags(40)
 
-    print(poetry.tags)
+    print(poetry.exploded_tags)
     # print(poetry.data)
