@@ -2,10 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from gensim.models import Word2Vec
-from sklearn.cluster import KMeans
-from sklearn.manifold import TSNE
-import numpy as np
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.mixture import GaussianMixture
 
 
 class PoetryData:
@@ -62,58 +60,28 @@ class PoetryData:
         plt.tight_layout()
         plt.show()
 
-    def train_word2vec(self, vector_size: int = 100, window: int = 5, min_count: int = 1):
-        # Prepare tag sentences
-        tag_sentences = self.data['Tags'].apply(list).tolist()
+    def one_hot_encode_tags(self):
+        mlb = MultiLabelBinarizer()
+        one_hot_tags = mlb.fit_transform(self.data['Tags'])
+        one_hot_encoded_df = pd.DataFrame(one_hot_tags, columns=mlb.classes_)
+        return one_hot_encoded_df
 
-        # Train Word2Vec
-        self.word2vec_model = Word2Vec(sentences=tag_sentences,
-                                       vector_size=vector_size,
-                                       window=window,
-                                       min_count=min_count,
-                                       workers=4)
+    def latent_class_analysis(self, n_classes: int):
+        gmm = GaussianMixture(n_components=n_classes, random_state=42)
+        one_hot_data = self.one_hot_encode_tags()
+        gmm.fit(one_hot_data)
+        self.data['latent_class'] = gmm.predict(one_hot_data)
 
-    def cluster_tags(self, n_clusters: int = 5):
-        if not self.word2vec_model:
-            raise ValueError("Word2Vec model not trained yet!")
+        means = gmm.means_
+        tag_names = one_hot_data.columns
+        means_df = pd.DataFrame(means, columns=tag_names)
 
-        # Get tag embeddings
-        tag_vectors = {tag: self.word2vec_model.wv[tag]
-                       for tag in self.word2vec_model.wv.index_to_key}
-        tag_names = list(tag_vectors.keys())
-        tag_embeddings = list(tag_vectors.values())
+         # For each latent class, sort tags by their mean value (higher mean = more associated with that class)
+        sorted_tags_by_class = means_df.T.sort_values(by=0, ascending=False)  # Sort by means
 
-        # Cluster using KMeans
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-        cluster_labels = kmeans.fit_predict(tag_embeddings)
-
-        # Store clusters
-        self.tag_clusters = {tag: cluster for tag,
-                             cluster in zip(tag_names, cluster_labels)}
-
-    def visualize_clusters(self):
-        if not self.tag_clusters:
-            raise ValueError("Tags have not been clustered yet!")
-
-        # Get embeddings and cluster labels
-        tag_vectors = {tag: self.word2vec_model.wv[tag]
-                       for tag in self.word2vec_model.wv.index_to_key}
-        # Convert to NumPy array
-        tag_embeddings = np.array(list(tag_vectors.values()))
-        cluster_labels = list(self.tag_clusters.values())
-
-        # Reduce dimensionality for visualization
-        tsne = TSNE(n_components=2, random_state=42,
-                    perplexity=30, n_iter=1000)
-        reduced_embeddings = tsne.fit_transform(
-            tag_embeddings)  # This will now work
-
-        # Plot the clusters
-        plt.figure(figsize=(10, 8))
-        scatter = plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1],
-                              c=cluster_labels, cmap='tab10', alpha=0.7)
-        plt.colorbar(scatter, label="Cluster")
-        plt.title("Tag Clusters Visualized with t-SNE")
-        plt.xlabel("t-SNE Dimension 1")
-        plt.ylabel("t-SNE Dimension 2")
-        plt.show()
+        # Print out the top tags associated with each latent class
+        for class_num in range(n_classes):
+            print(f"Top tags for class {class_num}:")
+            print(sorted_tags_by_class[class_num].head(100))  # Top 10 tags for the class
+            print("\n")
+        return gmm
