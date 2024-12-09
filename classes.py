@@ -1,9 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
 
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.mixture import GaussianMixture
 
 
 class PoetryData:
@@ -21,8 +21,11 @@ class PoetryData:
         data = data.dropna()
         return data.reset_index()
 
-    def load_translate_dict(self, translate_dict: dict) -> None:
-        self.translate_dict = translate_dict
+    def load_translate_dict(self, json_path: str) -> None:
+        with open(json_path, 'r') as f:
+            cluster_tags_dict = json.load(f)
+        self.translate_dict = cluster_tags_dict
+        self.translate_tags()
 
     def parse_text(self) -> None:
         self.data['Poem'] = (self.data['Poem']
@@ -33,8 +36,21 @@ class PoetryData:
     def parse_tags(self) -> None:
         self.data['Tags'] = self.data['Tags'].str.replace(
             r'([^,]+),\s*([^,]+),\s*&\s*([^,]+)',
-            r'\1 \2 & \3',
-            regex=True).str.split(',').apply(set)
+            r'\1_\2_and_\3',
+            regex=True)
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'([^,]+),\s([^,]+),\s([^,]+)',
+            r'\1_\2_and_\3',
+            regex=True)
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'(\w+)\s*&\s*(\w+)',
+            r'\1_and_\2',
+            regex=True)
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'\s+',
+            '_',
+            regex=True
+        ).str.split(',').map(set)
 
     def count_tags(self) -> None:
         self.tags = self.exploded_tags.value_counts()
@@ -66,22 +82,5 @@ class PoetryData:
         one_hot_encoded_df = pd.DataFrame(one_hot_tags, columns=mlb.classes_)
         return one_hot_encoded_df
 
-    def latent_class_analysis(self, n_classes: int):
-        gmm = GaussianMixture(n_components=n_classes, random_state=42)
-        one_hot_data = self.one_hot_encode_tags()
-        gmm.fit(one_hot_data)
-        self.data['latent_class'] = gmm.predict(one_hot_data)
-
-        means = gmm.means_
-        tag_names = one_hot_data.columns
-        means_df = pd.DataFrame(means, columns=tag_names)
-
-         # For each latent class, sort tags by their mean value (higher mean = more associated with that class)
-        sorted_tags_by_class = means_df.T.sort_values(by=0, ascending=False)  # Sort by means
-
-        # Print out the top tags associated with each latent class
-        for class_num in range(n_classes):
-            print(f"Top tags for class {class_num}:")
-            print(sorted_tags_by_class[class_num].head(100))  # Top 10 tags for the class
-            print("\n")
-        return gmm
+    def search_poems_by_tag(self, tag: str) -> pd.DataFrame:
+        return self.data[self.data['Tags'].apply(lambda tags: tag in tags)]
