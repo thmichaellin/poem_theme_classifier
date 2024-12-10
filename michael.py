@@ -8,7 +8,7 @@ if __name__ == "__main__":
 
     poetry.load_translate_dict('cluster_tags.json')
 
-    # poetry.plot_tags(30)
-    # print(poetry.data)
-    # poetry.data.to_csv('./data/data_parsed.csv', index=False)
-    # poetry.gaussian_mixture(n_classes=8)
+    subsets = PoetrySubset(poetry)
+
+    print(subsets.train_data)
+    print(subsets.val_data)
