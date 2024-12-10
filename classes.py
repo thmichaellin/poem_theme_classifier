@@ -121,8 +121,8 @@ class MultiLabelDataset(Dataset):
     def __init__(self, dataframe, tokenizer, max_len):
         self.tokenizer = tokenizer
         self.data = dataframe
-        self.text = dataframe.text
-        self.targets = self.data.labels
+        self.text = self.data['Poem']
+        self.targets = self.data['Tags']
         self.max_len = max_len
 
     def __len__(self):
