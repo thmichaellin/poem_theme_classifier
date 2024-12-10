@@ -4,6 +4,7 @@ import seaborn as sns
 import json
 
 from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.model_selection import train_test_split
 
 
 class PoetryData:
@@ -76,14 +77,64 @@ class PoetryData:
         plt.tight_layout()
         plt.show()
 
-    def one_hot_encode_tags(self):
-        mlb = MultiLabelBinarizer()
-        one_hot_tags = mlb.fit_transform(self.data['Tags'])
-        one_hot_encoded_df = pd.DataFrame(one_hot_tags, columns=mlb.classes_)
-        return one_hot_encoded_df
-
     def search_poems_by_tag(self, tag: str) -> pd.DataFrame:
         return self.data[self.data['Tags'].apply(lambda tags: tag in tags)]
 
-    def sample_data(self, n: int) -> None:
-        self.data = self.data.sample(n)
+
+class PoetrySubset(PoetryData):
+    def __init__(self, parent: PoetryData,
+                 validation_size: float = 0.2,
+                 random_state: int = 10):
+        self.data = parent.data
+        self.process_labels()
+        self.train_data, self.val_data = train_test_split(
+            self.data,
+            test_size=validation_size,
+            random_state=random_state
+        )
+
+    def process_labels(self):
+        mlb = MultiLabelBinarizer()
+        one_hot_tags = mlb.fit_transform(self.data['Tags'])
+
+        one_hot_encoded_df = pd.DataFrame({
+            'Poem': self.data['Poem'],
+            'Tags': [list(row) for row in one_hot_tags]
+        })
+        self.data = one_hot_encoded_df
+
+
+class MultiLabelDataset(Dataset):
+
+    def __init__(self, dataframe, tokenizer, max_len):
+        self.tokenizer = tokenizer
+        self.data = dataframe
+        self.text = dataframe.text
+        self.targets = self.data.labels
+        self.max_len = max_len
+
+    def __len__(self):
+        return len(self.text)
+
+    def __getitem__(self, index):
+        text = str(self.text[index])
+        text = " ".join(text.split())
+
+        inputs = self.tokenizer.encode_plus(
+            text,
+            None,
+            add_special_tokens=True,
+            max_length=self.max_len,
+            pad_to_max_length=True,
+            return_token_type_ids=True
+        )
+        ids = inputs['input_ids']
+        mask = inputs['attention_mask']
+        token_type_ids = inputs["token_type_ids"]
+
+        return {
+            'ids': torch.tensor(ids, dtype=torch.long),
+            'mask': torch.tensor(mask, dtype=torch.long),
+            'token_type_ids': torch.tensor(token_type_ids, dtype=torch.long),
+            'targets': torch.tensor(self.targets[index], dtype=torch.float)
+        }
