@@ -84,3 +84,6 @@ class PoetryData:
 
     def search_poems_by_tag(self, tag: str) -> pd.DataFrame:
         return self.data[self.data['Tags'].apply(lambda tags: tag in tags)]
+
+    def sample_data(self, n: int) -> None:
+        self.data = self.data.sample(n)
