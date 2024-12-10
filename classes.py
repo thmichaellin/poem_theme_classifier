@@ -158,7 +158,7 @@ class DistilBERTClass(torch.nn.Module):
         self.l1 = DistilBertModel.from_pretrained("distilbert-base-uncased")
         self.pre_classifier = torch.nn.Linear(768, 768)
         self.dropout = torch.nn.Dropout(0.1)
-        self.classifier = torch.nn.Linear(768, 6)
+        self.classifier = torch.nn.Linear(768, 8)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask)
