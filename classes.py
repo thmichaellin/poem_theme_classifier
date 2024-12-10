@@ -1,6 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
+
+from sklearn.preprocessing import MultiLabelBinarizer
 
 
 class PoetryData:
@@ -18,8 +21,11 @@ class PoetryData:
         data = data.dropna()
         return data.reset_index()
 
-    def load_translate_dict(self, translate_dict: dict) -> None:
-        self.translate_dict = translate_dict
+    def load_translate_dict(self, json_path: str) -> None:
+        with open(json_path, 'r') as f:
+            cluster_tags_dict = json.load(f)
+        self.translate_dict = cluster_tags_dict
+        self.translate_tags()
 
     def parse_text(self) -> None:
         self.data['Poem'] = (self.data['Poem']
@@ -30,8 +36,21 @@ class PoetryData:
     def parse_tags(self) -> None:
         self.data['Tags'] = self.data['Tags'].str.replace(
             r'([^,]+),\s*([^,]+),\s*&\s*([^,]+)',
-            r'\1 \2 & \3',
-            regex=True).str.split(',').apply(set)
+            r'\1_\2_and_\3',
+            regex=True)
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'([^,]+),\s([^,]+),\s([^,]+)',
+            r'\1_\2_and_\3',
+            regex=True)
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'(\w+)\s*&\s*(\w+)',
+            r'\1_and_\2',
+            regex=True)
+        self.data['Tags'] = self.data['Tags'].str.replace(
+            r'\s+',
+            '_',
+            regex=True
+        ).str.split(',').map(set)
 
     def count_tags(self) -> None:
         self.tags = self.exploded_tags.value_counts()
@@ -56,3 +75,12 @@ class PoetryData:
         plt.title(f'Top {num_tags} Most Common Tags')
         plt.tight_layout()
         plt.show()
+
+    def one_hot_encode_tags(self):
+        mlb = MultiLabelBinarizer()
+        one_hot_tags = mlb.fit_transform(self.data['Tags'])
+        one_hot_encoded_df = pd.DataFrame(one_hot_tags, columns=mlb.classes_)
+        return one_hot_encoded_df
+
+    def search_poems_by_tag(self, tag: str) -> pd.DataFrame:
+        return self.data[self.data['Tags'].apply(lambda tags: tag in tags)]
