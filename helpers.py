@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import tqdm
 
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
@@ -38,7 +39,7 @@ def train(epoch, device, model, optimizer, training_loader, scaler):
         scaler.update()
 
 
-def validation(testing_loader, model):
+def validation(testing_loader, model, device):
     model.eval()
     fin_targets = []
     fin_outputs = []
