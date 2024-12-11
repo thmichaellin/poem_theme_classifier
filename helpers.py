@@ -31,7 +31,7 @@ def train(epoch, device, model, optimizer, training_loader, scaler):
         targets = data['targets'].to(device, dtype=torch.float)
 
         optimizer.zero_grad()
-        with torch.cuda.amp.autocast():
+        with torch.cuda.amp.autocast('cuda'):
             outputs = model(ids, mask, token_type_ids)
             loss = loss_fn(outputs, targets)
         scaler.scale(loss).backward()
@@ -55,3 +55,35 @@ def validation(testing_loader, model, device):
             fin_outputs.extend(torch.sigmoid(
                 outputs).cpu().detach().numpy().tolist())
     return fin_outputs, fin_targets
+
+
+def predict_tags(poem_text, model, tokenizer, max_len, device, tags, threshold=0.5):
+    inputs = tokenizer.encode_plus(
+        poem_text,
+        None,
+        add_special_tokens=True,
+        max_length=max_len,
+        padding='max_length',
+        truncation=True,
+        return_token_type_ids=True
+    )
+
+    input_ids = torch.tensor(
+        inputs['input_ids'], dtype=torch.long).unsqueeze(0).to(device)
+    attention_mask = torch.tensor(
+        inputs['attention_mask'], dtype=torch.long).unsqueeze(0).to(device)
+    token_type_ids = torch.tensor(
+        inputs['token_type_ids'], dtype=torch.long).unsqueeze(0).to(device)
+
+    model.eval()
+    with torch.no_grad():
+        output = model(input_ids, attention_mask, token_type_ids)
+
+    sigmoid_output = torch.sigmoid(output)
+
+    sigmoid_output = sigmoid_output.cpu().numpy().flatten()
+
+    predicted_tags = [tags[i] for i in range(
+        len(sigmoid_output)) if sigmoid_output[i] >= threshold]
+
+    return predicted_tags
