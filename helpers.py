@@ -31,7 +31,7 @@ def train(epoch, device, model, optimizer, training_loader, scaler):
         targets = data['targets'].to(device, dtype=torch.float)
 
         optimizer.zero_grad()
-        with torch.cuda.amp.autocast('cuda'):
+        with torch.cuda.amp.autocast():
             outputs = model(ids, mask, token_type_ids)
             loss = loss_fn(outputs, targets)
         scaler.scale(loss).backward()
