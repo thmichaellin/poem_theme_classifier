@@ -13,7 +13,7 @@ def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
             tmp_a = 1
         else:
             tmp_a = len(set_true.intersection(set_pred)) /\
-                float(len(set_true.union(set_pred)))
+                float(len(set_true | set_pred))
         acc_list.append(tmp_a)
     return np.mean(acc_list)
 
