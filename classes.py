@@ -95,13 +95,13 @@ class PoetryData:
 
 class PoetrySubset(PoetryData):
     def __init__(self, parent: PoetryData,
-                 validation_size: float = 0.2,
+                 test_size: float = 0.2,
                  random_state: int = 10):
         self.data = parent.data
         self.process_labels()
         self.train_data, self.val_data = train_test_split(
             self.data,
-            test_size=validation_size,
+            test_size=test_size,
             random_state=random_state
         )
 
