@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import tqdm
+from tqdm import tqdm
 
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
