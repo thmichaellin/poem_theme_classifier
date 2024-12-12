@@ -106,7 +106,7 @@ class PoetrySubset(PoetryData):
         )
         self.val_data, self.test_data = train_test_split(
             self.data,
-            test_size=test_size / 2,
+            test_size=.5,
             random_state=random_state
         )
 
