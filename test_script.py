@@ -14,6 +14,6 @@ if __name__ == "__main__":
 
     print(sum / len(tags))
 
-    print(poetry.data.iloc[25]['Poem'])
+    print(poetry.data.iloc[420]['Poem'])
 
-    print(poetry.data.iloc[25]['Tags'])
+    # print(poetry.data.iloc[25]['Tags'])
