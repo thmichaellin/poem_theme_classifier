@@ -392,16 +392,22 @@ class DistilBERTClass(torch.nn.Module):
         self.classifier = torch.nn.Linear(768, 8)
 
     def forward(self, input_ids: torch.Tensor,
-                attention_mask: torch.Tensor) -> torch.Tensor:
+                attention_mask: torch.Tensor,
+                token_type_ids: torch.Tensor) -> torch.Tensor:
         """
-        Defines the forward pass of the model.
+        Performs a forward pass through the DistilBERT model and the 
+        classification head.
 
-        Parameters:
-        ----------
+        Args:
+        -----
         input_ids : torch.Tensor
-            The tokenized input ids.
+            A tensor of input token IDs, typically from the tokenizer.
         attention_mask : torch.Tensor
-            The attention mask to indicate padded tokens.
+            A tensor indicating which tokens are padding (0) and which are 
+            not (1).
+        token_type_ids : torch.Tensor
+            A tensor for token type IDs, typically used for sentence pair tasks 
+            (optional for single sentences).
 
         Returns:
         -------
@@ -416,4 +422,5 @@ class DistilBERTClass(torch.nn.Module):
         pooler = torch.nn.Tanh()(pooler)
         pooler = self.dropout(pooler)
         output = self.classifier(pooler)
+
         return output
