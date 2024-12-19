@@ -1,31 +1,89 @@
-import numpy as np
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
-    acc_list = []
-    for i in range(y_true.shape[0]):
-        set_true = set(np.where(y_true[i])[0])
-        set_pred = set(np.where(y_pred[i])[0])
-        tmp_a = None
-        if len(set_true) == 0 and len(set_pred) == 0:
-            tmp_a = 1
-        else:
-            tmp_a = len(set_true.intersection(set_pred)) /\
-                float(len(set_true | set_pred))
-        acc_list.append(tmp_a)
-    return np.mean(acc_list)
+def hamming_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Computes the Hamming score between true and predicted labels for 
+    multi-label classification.
+
+    Parameters:
+    ----------
+    y_true : np.ndarray
+        The true labels in a binary format (one-hot encoded).
+    y_pred : np.ndarray
+        The predicted labels in a binary format (probabilities converted to
+        binary using a threshold).
+
+    Returns:
+    -------
+    float
+        The Hamming score between the true and predicted labels.
+    """
+
+    return np.mean([
+        len(set(np.where(y_true[i])[0]).intersection(
+            set(np.where(y_pred[i])[0]))) /
+        len(set(np.where(y_true[i])[0]).union(set(np.where(y_pred[i])[0])))
+
+        if len(set(np.where(y_true[i])[0])) > 0 else 1
+        for i in range(y_true.shape[0])
+    ])
 
 
-def loss_fn(outputs, targets):
+def loss_fn(outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    """
+    Computes the binary cross-entropy loss with logits for multi-label 
+    classification.
+
+    Parameters:
+    ----------
+    outputs : torch.Tensor
+        The model outputs (logits) for multi-label classification.
+    targets : torch.Tensor
+        The true labels for multi-label classification.
+
+    Returns:
+    -------
+    torch.Tensor
+        The computed binary cross-entropy loss.
+    """
+
     return torch.nn.BCEWithLogitsLoss()(outputs, targets)
 
 
-def train(epoch, device, model, optimizer, training_loader, scaler):
+def train(epoch: int, device: torch.device, model: torch.nn.Module,
+          optimizer: torch.optim.Optimizer,
+          training_loader: torch.utils.data.DataLoader,
+          scaler: torch.cuda.amp.GradScaler) -> tuple:
+    """
+    Trains the model for one epoch.
+
+    Parameters:
+    ----------
+    epoch : int
+        The current epoch number.
+    device : torch.device
+        The device (CPU or GPU) to run the model on.
+    model : torch.nn.Module
+        The PyTorch model to train.
+    optimizer : torch.optim.Optimizer
+        The optimizer used for training.
+    training_loader : torch.utils.data.DataLoader
+        The DataLoader that provides the training data.
+    scaler : torch.cuda.amp.GradScaler
+        The GradScaler used for mixed-precision training.
+
+    Returns:
+    -------
+    tuple
+        The average loss for the epoch, the predicted outputs, 
+        and the true targets.
+    """
     model.train()
-    fin_targets = []
-    fin_outputs = []
+    fin_targets, fin_outputs = [], []
     running_loss = 0.0
 
     for _, data in tqdm(enumerate(training_loader, 0)):
@@ -43,23 +101,39 @@ def train(epoch, device, model, optimizer, training_loader, scaler):
         scaler.step(optimizer)
         scaler.update()
 
-        # Accumulate loss and store targets/outputs for metrics
         running_loss += loss.item()
         fin_targets.extend(targets.cpu().detach().numpy().tolist())
         fin_outputs.extend(torch.sigmoid(
             outputs).cpu().detach().numpy().tolist())
 
-    # Calculate average loss for the epoch
     avg_loss = running_loss / len(training_loader)
 
-    # Return the average loss, and the collected outputs and targets
     return avg_loss, fin_outputs, fin_targets
 
 
-def validation(testing_loader, model, device):
+def validation(testing_loader: torch.utils.data.DataLoader,
+               model: torch.nn.Module,
+               device: torch.device) -> tuple:
+    """
+    Evaluates the model on the validation or test dataset.
+
+    Parameters:
+    ----------
+    testing_loader : torch.utils.data.DataLoader
+        The DataLoader that provides the test/validation data.
+    model : torch.nn.Module
+        The PyTorch model to evaluate.
+    device : torch.device
+        The device (CPU or GPU) to run the model on.
+
+    Returns:
+    -------
+    tuple
+        The predicted outputs and true targets for the evaluation data.
+    """
     model.eval()
-    fin_targets = []
-    fin_outputs = []
+    fin_targets, fin_outputs = [], []
+
     with torch.no_grad():
         for _, data in tqdm(enumerate(testing_loader, 0)):
             ids = data['ids'].to(device, dtype=torch.long)
@@ -68,13 +142,44 @@ def validation(testing_loader, model, device):
                 device, dtype=torch.long)
             targets = data['targets'].to(device, dtype=torch.float)
             outputs = model(ids, mask, token_type_ids)
+
             fin_targets.extend(targets.cpu().detach().numpy().tolist())
             fin_outputs.extend(torch.sigmoid(
                 outputs).cpu().detach().numpy().tolist())
+
     return fin_outputs, fin_targets
 
 
-def predict_tags(poem_text, model, tokenizer, max_len, device, tags, threshold=0.5):
+def predict_tags(poem_text: str, model: torch.nn.Module,
+                 tokenizer: torch.nn.Module, max_len: int,
+                 device: torch.device, tags: list,
+                 threshold: float = 0.5) -> list:
+    """
+    Predicts the tags for a given poem text using the trained model.
+
+    Parameters:
+    ----------
+    poem_text : str
+        The poem text for which to predict tags.
+    model : torch.nn.Module
+        The trained PyTorch model.
+    tokenizer : torch.nn.Module
+        The tokenizer used to process the poem text.
+    max_len : int
+        The maximum length for tokenized input sequences.
+    device : torch.device
+        The device (CPU or GPU) to run the model on.
+    tags : list
+        The list of tags corresponding to the output of the model.
+    threshold : float, optional
+        The threshold for predicting a tag (default is 0.5).
+
+    Returns:
+    -------
+    list
+        A list of predicted tags for the given poem text.
+    """
+
     inputs = tokenizer.encode_plus(
         poem_text,
         None,
@@ -96,11 +201,51 @@ def predict_tags(poem_text, model, tokenizer, max_len, device, tags, threshold=0
     with torch.no_grad():
         output = model(input_ids, attention_mask, token_type_ids)
 
-    sigmoid_output = torch.sigmoid(output)
+    sigmoid_output = torch.sigmoid(output).cpu().numpy().flatten()
 
-    sigmoid_output = sigmoid_output.cpu().numpy().flatten()
-
-    predicted_tags = [tags[i] for i in range(
+    return [tags[i] for i in range(
         len(sigmoid_output)) if sigmoid_output[i] >= threshold]
 
-    return predicted_tags
+
+def plot_loss_score(train_losses: list, val_losses: list,
+                    train_hamming_scores: list,
+                    val_hamming_scores: list) -> None:
+    """
+    Plots the training and validation loss and Hamming scores over epochs.
+
+    Parameters:
+    ----------
+    train_losses : list
+        The list of training losses for each epoch.
+    val_losses : list
+        The list of validation losses for each epoch.
+    train_hamming_scores : list
+        The list of training Hamming scores for each epoch.
+    val_hamming_scores : list
+        The list of validation Hamming scores for each epoch.
+    """
+
+    plt.figure(figsize=(12, 6))
+
+    # Loss Curve
+    plt.subplot(1, 2, 1)
+    plt.plot(train_losses, label='Training Loss')
+    plt.plot(val_losses, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Hamming Loss')
+    plt.title('Training vs Validation Loss')
+    plt.legend()
+    plt.xticks(range(len(train_losses)))
+
+    # Hamming Score Curve
+    plt.subplot(1, 2, 2)
+    plt.plot(train_hamming_scores, label='Training Hamming Score')
+    plt.plot(val_hamming_scores, label='Validation Hamming Score')
+    plt.xlabel('Epoch')
+    plt.ylabel('Hamming Score')
+    plt.title('Training vs Validation Hamming Score')
+    plt.legend()
+    plt.xticks(range(len(train_hamming_scores)))
+
+    plt.tight_layout()
+    plt.show()
