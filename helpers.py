@@ -49,8 +49,8 @@ def train(epoch, device, model, optimizer, training_loader, scaler):
         fin_outputs.extend(torch.sigmoid(
             outputs).cpu().detach().numpy().tolist())
 
-        # Calculate average loss for the epoch
-        avg_loss = running_loss / len(training_loader)
+    # Calculate average loss for the epoch
+    avg_loss = running_loss / len(training_loader)
 
     # Return the average loss, and the collected outputs and targets
     return avg_loss, fin_outputs, fin_targets

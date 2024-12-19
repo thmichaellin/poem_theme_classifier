@@ -6,9 +6,14 @@ if __name__ == "__main__":
 
     # print(poetry.search_poems_by_tag('Sciences'))
 
-    poetry.load_translate_dict('cluster_tags.json')
+    poetry.load_translate_dict('./data/cluster_tags.json')
 
-    subsets = PoetrySubset(poetry)
+    tags = poetry.data['Tags']
 
-    print(subsets.train_data)
-    print(subsets.val_data)
+    sum = sum(len(tag_set) for tag_set in tags)
+
+    print(sum / len(tags))
+
+    print(poetry.data.iloc[320]['Poem'])
+
+    print(poetry.data.iloc[320]['Tags'])
