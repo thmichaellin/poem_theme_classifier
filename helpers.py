@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 def hamming_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
-    Computes the Hamming score between true and predicted labels for 
+    Computes the Hamming score between true and predicted labels for
     multi-label classification.
 
     Parameters:
@@ -35,7 +35,7 @@ def hamming_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 def loss_fn(outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """
-    Computes the binary cross-entropy loss with logits for multi-label 
+    Computes the binary cross-entropy loss with logits for multi-label
     classification.
 
     Parameters:
@@ -54,7 +54,7 @@ def loss_fn(outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     return torch.nn.BCEWithLogitsLoss()(outputs, targets)
 
 
-def train(epoch: int, device: torch.device, model: torch.nn.Module,
+def train(device: torch.device, model: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           training_loader: torch.utils.data.DataLoader,
           scaler: torch.cuda.amp.GradScaler) -> tuple:
@@ -63,8 +63,6 @@ def train(epoch: int, device: torch.device, model: torch.nn.Module,
 
     Parameters:
     ----------
-    epoch : int
-        The current epoch number.
     device : torch.device
         The device (CPU or GPU) to run the model on.
     model : torch.nn.Module
@@ -79,7 +77,7 @@ def train(epoch: int, device: torch.device, model: torch.nn.Module,
     Returns:
     -------
     tuple
-        The average loss for the epoch, the predicted outputs, 
+        The average loss for the epoch, the predicted outputs,
         and the true targets.
     """
     model.train()
@@ -102,9 +100,9 @@ def train(epoch: int, device: torch.device, model: torch.nn.Module,
         scaler.update()
 
         running_loss += loss.item()
-        fin_targets.extend(targets.cpu().detach().numpy().tolist())
-        fin_outputs.extend(torch.sigmoid(
-            outputs).cpu().detach().numpy().tolist())
+
+        fin_targets.extend(targets.cpu().detach().numpy())
+        fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy())
 
     avg_loss = running_loss / len(training_loader)
 
