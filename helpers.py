@@ -24,6 +24,10 @@ def loss_fn(outputs, targets):
 
 def train(epoch, device, model, optimizer, training_loader, scaler):
     model.train()
+    fin_targets = []
+    fin_outputs = []
+    running_loss = 0.0
+
     for _, data in tqdm(enumerate(training_loader, 0)):
         ids = data['ids'].to(device, dtype=torch.long)
         mask = data['mask'].to(device, dtype=torch.long)
@@ -34,9 +38,22 @@ def train(epoch, device, model, optimizer, training_loader, scaler):
         with torch.cuda.amp.autocast():
             outputs = model(ids, mask, token_type_ids)
             loss = loss_fn(outputs, targets)
+
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
+
+        # Accumulate loss and store targets/outputs for metrics
+        running_loss += loss.item()
+        fin_targets.extend(targets.cpu().detach().numpy().tolist())
+        fin_outputs.extend(torch.sigmoid(
+            outputs).cpu().detach().numpy().tolist())
+
+        # Calculate average loss for the epoch
+        avg_loss = running_loss / len(training_loader)
+
+    # Return the average loss, and the collected outputs and targets
+    return avg_loss, fin_outputs, fin_targets
 
 
 def validation(testing_loader, model, device):
