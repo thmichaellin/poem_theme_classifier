@@ -165,12 +165,14 @@ class PoetryData:
         self.exploded_tags = self.data['Tags'].explode()
         self.count_tags()
 
-    def plot_tags(self, num_tags: int = 30) -> None:
+    def plot_tags(self, y_scale: tuple, num_tags: int = 30) -> None:
         """
         Plots the most common tags as a bar chart.
 
         Parameters:
         ----------
+        y_scale : tuple, optional
+            Scale of the y-axis.
         num_tags : int, optional
             The number of most common tags to display in the plot
             (default is 30).
@@ -181,6 +183,7 @@ class PoetryData:
         plt.xlabel('Tags')
         plt.ylabel('Frequency')
         plt.title(f'Top {num_tags} Most Common Tags')
+        plt.ylim(y_scale)
         plt.tight_layout()
         plt.show()
 
