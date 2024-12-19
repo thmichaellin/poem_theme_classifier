@@ -231,6 +231,7 @@ def plot_loss_score(train_losses: list, val_losses: list,
     plt.plot(val_losses, label='Validation Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Hamming Loss')
+    plt.ylim(0.25, 0.9)
     plt.title('Training vs Validation Loss')
     plt.legend()
     plt.xticks(range(len(train_losses)))
