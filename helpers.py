@@ -2,7 +2,8 @@ import torch
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import (precision_score, recall_score, f1_score,
+                             confusion_matrix)
 from tqdm import tqdm
 
 
@@ -267,54 +268,62 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray):
     Returns:
     -------
     dict
-        A dictionary containing precision, recall, F1-score, and Hamming score.
+        A dictionary containing precision, recall, F1-score, Hamming score for 
+        both micro and macro averages.
     """
+
     hamming = hamming_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='micro')
-    recall = recall_score(y_true, y_pred, average='micro')
-    f1 = f1_score(y_true, y_pred, average='micro')
+
+    precision_micro = precision_score(y_true, y_pred, average='micro')
+    recall_micro = recall_score(y_true, y_pred, average='micro')
+    f1_micro = f1_score(y_true, y_pred, average='micro')
+
+    precision_macro = precision_score(y_true, y_pred, average='macro')
+    recall_macro = recall_score(y_true, y_pred, average='macro')
+    f1_macro = f1_score(y_true, y_pred, average='macro')
 
     return {
         "hamming_score": hamming,
-        "precision": precision,
-        "recall": recall,
-        "f1_score": f1,
+        "precision_micro": precision_micro,
+        "recall_micro": recall_micro,
+        "f1_micro": f1_micro,
+        "precision_macro": precision_macro,
+        "recall_macro": recall_macro,
+        "f1_macro": f1_macro,
     }
 
 
-def plot_confusion_matrix(targets: np.ndarray, final_outputs: np.ndarray,
-                          tags: list):
+def plot_labelwise_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, tags: list):
     """
-    Computes and plots an 8x8 confusion matrix for multi-label classification.
+    Plots confusion matrices for each label in a multi-label classification task.
 
     Parameters:
     ----------
-    targets : np.ndarray
+    y_true : np.ndarray
         The true labels in a binary format (one-hot encoded).
-    final_outputs : np.ndarray
+    y_pred : np.ndarray
         The predicted labels in a binary format (thresholded probabilities).
     tags : list
         The list of tag names.
     """
+    # Initialize a figure to hold multiple subplots (one per label)
+    fig, axes = plt.subplots(nrows=2, ncols=4, figsize=(15, 10))
+    axes = axes.ravel()  # Flatten the axes array for easier iteration
 
-    conf_matrix = np.zeros((len(tags), len(tags)))
+    for i in range(len(tags)):
+        # Extract the true and predicted labels for the current label
+        true_label = y_true[:, i]
+        pred_label = y_pred[:, i]
 
-    for i in range(len(targets)):
-        true_indices = np.where(targets[i] == 1)[0]
-        pred_indices = np.where(final_outputs[i] == 1)[
-            0]
+        # Compute confusion matrix for the current label
+        cm = confusion_matrix(true_label, pred_label)
 
-        for t in true_indices:
-            for p in pred_indices:
-                conf_matrix[t, p] += 1
+        # Plot confusion matrix for the current label
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=axes[i],
+                    xticklabels=["Pred: No", "Pred: Yes"], yticklabels=["True: No", "True: Yes"])
+        axes[i].set_xlabel('Predicted')
+        axes[i].set_ylabel('True')
+        axes[i].set_title(f'Confusion Matrix for {tags[i]}')
 
-    print("\n8x8 Confusion Matrix:")
-    print(conf_matrix)
-
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(conf_matrix, annot=True, fmt='.0f',
-                xticklabels=tags, yticklabels=tags, cmap="Blues")
-    plt.xlabel('Predicted Tags')
-    plt.ylabel('True Tags')
-    plt.title('8x8 Confusion Matrix')
+    plt.tight_layout()
     plt.show()
