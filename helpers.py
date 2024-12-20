@@ -293,9 +293,11 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray):
     }
 
 
-def plot_labelwise_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, tags: list):
+def plot_labelwise_confusion_matrix(y_true: np.ndarray,
+                                    y_pred: np.ndarray, tags: list):
     """
-    Plots confusion matrices for each label in a multi-label classification task.
+    Plots confusion matrices for each label in a multi-label 
+    classification task.
 
     Parameters:
     ----------
@@ -306,7 +308,7 @@ def plot_labelwise_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, tags
     tags : list
         The list of tag names.
     """
-    fig, axes = plt.subplots(nrows=2, ncols=4, figsize=(15, 10))
+    _, axes = plt.subplots(nrows=2, ncols=4, figsize=(15, 10))
     axes = axes.ravel()
 
     for i in range(len(tags)):
