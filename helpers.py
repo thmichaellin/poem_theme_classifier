@@ -1,6 +1,8 @@
 import torch
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.metrics import precision_score, recall_score, f1_score
 from tqdm import tqdm
 
 
@@ -247,4 +249,72 @@ def plot_loss_score(train_losses: list, val_losses: list,
     plt.xticks(range(len(train_hamming_scores)))
 
     plt.tight_layout()
+    plt.show()
+
+
+def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray):
+    """
+    Computes various evaluation metrics for multi-label classification.
+
+    Parameters:
+    ----------
+    y_true : np.ndarray
+        The true labels in a binary format (one-hot encoded).
+    y_pred : np.ndarray
+        The predicted labels in a binary format 
+        (probabilities converted to binary using a threshold).
+
+    Returns:
+    -------
+    dict
+        A dictionary containing precision, recall, F1-score, and Hamming score.
+    """
+    hamming = hamming_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, average='micro')
+    recall = recall_score(y_true, y_pred, average='micro')
+    f1 = f1_score(y_true, y_pred, average='micro')
+
+    return {
+        "hamming_score": hamming,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+    }
+
+
+def plot_confusion_matrix(targets: np.ndarray, final_outputs: np.ndarray,
+                          tags: list):
+    """
+    Computes and plots an 8x8 confusion matrix for multi-label classification.
+
+    Parameters:
+    ----------
+    targets : np.ndarray
+        The true labels in a binary format (one-hot encoded).
+    final_outputs : np.ndarray
+        The predicted labels in a binary format (thresholded probabilities).
+    tags : list
+        The list of tag names.
+    """
+
+    conf_matrix = np.zeros((len(tags), len(tags)))
+
+    for i in range(len(targets)):
+        true_indices = np.where(targets[i] == 1)[0]
+        pred_indices = np.where(final_outputs[i] == 1)[
+            0]
+
+        for t in true_indices:
+            for p in pred_indices:
+                conf_matrix[t, p] += 1
+
+    print("\n8x8 Confusion Matrix:")
+    print(conf_matrix)
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(conf_matrix, annot=True, fmt='.0f',
+                xticklabels=tags, yticklabels=tags, cmap="Blues")
+    plt.xlabel('Predicted Tags')
+    plt.ylabel('True Tags')
+    plt.title('8x8 Confusion Matrix')
     plt.show()

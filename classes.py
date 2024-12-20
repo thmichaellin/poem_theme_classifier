@@ -204,12 +204,15 @@ class PoetryData:
 
 class PoetrySubset(PoetryData):
     """
-    A class for creating subsets of poetry data for training, validation,
+    A class for creating subsets of poetry data for training, validation, 
     and testing.
 
-    Inherits from the PoetryData class.
+    This class inherits from the `PoetryData` class and is responsible for 
+    splitting the data into training, validation, and test subsets. 
+    Additionally, it processes the tags for multi-label classification using 
+    one-hot encoding.
 
-    Attributes:
+    Attributes
     ----------
     train_data : pd.DataFrame
         DataFrame containing the training data.
@@ -217,44 +220,47 @@ class PoetrySubset(PoetryData):
         DataFrame containing the validation data.
     test_data : pd.DataFrame
         DataFrame containing the test data.
+    test_size : float
+        The proportion of the dataset to include in the test subset 
+        (default is 0.3).
+    random_state : int
+        The random seed used for splitting the dataset 
+        (default is 10).
+    data : pd.DataFrame
+        DataFrame containing the full dataset after processing tags.
 
     Methods:
     -------
     process_labels() -> None:
         Processes the labels (tags) for multi-label classification.
+    generate_subsets() -> None:
+        Splits the dataset into training, validation, and test subsets.
     """
 
     def __init__(self, parent: PoetryData,
                  test_size: float = 0.3,
                  random_state: int = 10):
         """
-        Initializes the PoetrySubset class by splitting the data into training,
-        validation, and test subsets.
+        Initializes the PoetrySubset class by splitting the data into training, 
+        validation, and test subsets, and processes the labels for multi-label 
+        classification.
 
-        Parameters:
+        Parameters
         ----------
         parent : PoetryData
             The parent PoetryData object from which the data is derived.
         test_size : float, optional
-            The proportion of the dataset to include in the test subset
+            The proportion of the dataset to include in the test subset 
             (default is 0.3).
         random_state : int, optional
-            The random seed used for splitting the dataset
+            The random seed used for splitting the dataset 
             (default is 10).
         """
 
+        self.test_size = test_size
+        self.random_state = random_state
         self.data = parent.data
         self.process_labels()
-        self.train_data, self.val_test_data = train_test_split(
-            self.data,
-            test_size=test_size,
-            random_state=random_state
-        )
-        self.val_data, self.test_data = train_test_split(
-            self.val_test_data,
-            test_size=.5,
-            random_state=random_state
-        )
 
     def process_labels(self) -> None:
         """
@@ -269,6 +275,26 @@ class PoetrySubset(PoetryData):
             'Poem': self.data['Poem'],
             'Tags': [list(row) for row in one_hot_tags]
         })
+
+    def generate_subsets(self):
+        """
+        Splits the data into training, validation, and test subsets.
+
+        The data is first split into a training subset and a combined 
+        validation/test subset. The validation/test subset is then split evenly 
+        into validation and test data.
+        """
+
+        self.train_data, self.val_test_data = train_test_split(
+            self.data,
+            test_size=self.test_size,
+            random_state=self.random_state
+        )
+        self.val_data, self.test_data = train_test_split(
+            self.val_test_data,
+            test_size=.5,
+            random_state=self.random_state
+        )
 
 
 class MultiLabelDataset(Dataset):

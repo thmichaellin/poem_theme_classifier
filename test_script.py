@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     # print(poetry.search_poems_by_tag('Sciences'))
 
-    print(poetry.count_tags)
+    print(poetry.tags)
 
     # poetry.load_translate_dict('./data/cluster_tags.json')
 
