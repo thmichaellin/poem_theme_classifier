@@ -306,24 +306,22 @@ def plot_labelwise_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, tags
     tags : list
         The list of tag names.
     """
-    # Initialize a figure to hold multiple subplots (one per label)
     fig, axes = plt.subplots(nrows=2, ncols=4, figsize=(15, 10))
-    axes = axes.ravel()  # Flatten the axes array for easier iteration
+    axes = axes.ravel()
 
     for i in range(len(tags)):
-        # Extract the true and predicted labels for the current label
         true_label = y_true[:, i]
         pred_label = y_pred[:, i]
 
-        # Compute confusion matrix for the current label
         cm = confusion_matrix(true_label, pred_label)
 
-        # Plot confusion matrix for the current label
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=axes[i],
-                    xticklabels=["Pred: No", "Pred: Yes"], yticklabels=["True: No", "True: Yes"])
+                    xticklabels=["Pred: No", "Pred: Yes"],
+                    yticklabels=["True: No", "True: Yes"],
+                    cbar=False)
         axes[i].set_xlabel('Predicted')
         axes[i].set_ylabel('True')
-        axes[i].set_title(f'Confusion Matrix for {tags[i]}')
+        axes[i].set_title(f'{tags[i]}')
 
     plt.tight_layout()
     plt.show()
